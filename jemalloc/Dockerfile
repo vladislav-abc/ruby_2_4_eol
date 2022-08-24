@@ -1,11 +1,7 @@
 FROM alpine:3.16
 
 RUN apk add --no-cache \
-		gmp-dev \
-		ca-certificates \
-		wget \
-		build-base \
-	&& update-ca-certificates
+		gmp-dev
 
 # skip installing gem documentation
 RUN set -eux; \
@@ -21,12 +17,25 @@ ENV RUBY_DOWNLOAD_SHA256 748a8980d30141bd1a4124e11745bb105b436fb1890826e0d2b9ea3
 ENV RUBYGEMS_VERSION 3.0.3
 ENV JEMALLOC_VERSION 5.2.1
 
-RUN wget -O - https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -xj && \
+RUN apk add --no-cache \
+		ca-certificates \
+		wget \
+		build-base \
+	&& update-ca-certificates ;\
+	\
+	wget -O - https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -xj && \
     cd jemalloc-${JEMALLOC_VERSION} && \ 
 	gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)"; \
     ./configure --build="$gnuArch" && \
     make && \
-    make install
+    make install && \
+    cd /; \
+    rm -rfv jemalloc*; \
+    apk del --no-network \
+        ca-certificates \
+        wget \
+        build-base
+
 
 # some of ruby's build scripts are written in ruby
 #   we purge system ruby later to make sure our final image uses what we just built
