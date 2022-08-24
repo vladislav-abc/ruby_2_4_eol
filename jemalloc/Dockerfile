@@ -1,7 +1,11 @@
 FROM alpine:3.16
 
 RUN apk add --no-cache \
-		gmp-dev
+		gmp-dev \
+		ca-certificates \
+		wget \
+		build-base \
+	&& update-ca-certificates
 
 # skip installing gem documentation
 RUN set -eux; \
@@ -15,6 +19,14 @@ ENV RUBY_MAJOR 2.4
 ENV RUBY_VERSION 2.4.2
 ENV RUBY_DOWNLOAD_SHA256 748a8980d30141bd1a4124e11745bb105b436fb1890826e0d2b9ea31af27f735
 ENV RUBYGEMS_VERSION 3.0.3
+ENV JEMALLOC_VERSION 5.2.1
+
+RUN wget -O - https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -xj && \
+    cd jemalloc-${JEMALLOC_VERSION} && \ 
+	gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)"; \
+    ./configure --build="$gnuArch" && \
+    make && \
+    make install
 
 # some of ruby's build scripts are written in ruby
 #   we purge system ruby later to make sure our final image uses what we just built
@@ -85,6 +97,7 @@ RUN set -eux; \
 		--build="$gnuArch" \
 		--disable-install-doc \
 		--enable-shared \
+		--with-jemalloc \
 	; \
 	make -j "$(nproc)"; \
 	make install; \
@@ -121,6 +134,9 @@ RUN set -eux; \
 	ruby --version; \
 	gem --version; \
 	bundle --version
+
+# Sanity check for jemalloc
+RUN ruby -r rbconfig -e "abort 'jemalloc not enabled' unless RbConfig::CONFIG['LIBS'].include?('jemalloc') || RbConfig::CONFIG['MAINLIBS'].include?('jemalloc')"
 
 # don't create ".bundle" in all our apps
 ENV GEM_HOME /usr/local/bundle
