@@ -1,4 +1,4 @@
-FROM alpine:3.11
+FROM alpine:3.16
 
 RUN apk add --no-cache \
 		gmp-dev
@@ -48,6 +48,7 @@ RUN set -eux; \
 		xz \
 		yaml-dev \
 		zlib-dev \
+		patch \
 	; \
 	\
 	wget -O ruby.tar.xz "https://cache.ruby-lang.org/pub/ruby/${RUBY_MAJOR%-rc}/ruby-$RUBY_VERSION.tar.xz"; \
